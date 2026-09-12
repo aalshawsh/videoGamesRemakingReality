@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Page Title</title>
+</head>
+<body>
+
+<input id="inputName" type="text" minlength="2" maxlength="20" size="10" />
+<button id="joinBtn" onclick="handleJoin()">Join</button>
+<p id="NameError"></p>
+<p id="Connecting"></p>
+
+<video id = "video" autoplay muted>
+</video>
+
+<canvas id="canvas" width="640" height="480">
+
+</canvas>
+
+<script>
+
+
+let vid = document.getElementById("video")
+let canvas = document.getElementById("canvas")
+let draw = canvas.getContext("2d")
+
+// what happens when player clicks join!
+function handleJoin(){
+
+	// check if valid
+	let length = document.getElementById("inputName").value.length
+	let nameErr = document.getElementById("NameError")
+	if(length<2 || length>21){
+		nameErr.textContent = "Please enter a name between 2 and 20 						characters long";
+		return;
+	}
+	nameErr.textContent = "";
+	document.getElementById("Connecting").textContent = "Connecting..."
+
+	let websocket = new WebSocket("wss://uncross-divinely-pointing.ngrok-free.dev");	
+
+	websocket.onopen = function(){
+	document.getElementById("Connecting").textContent = ""
+	document.getElementById("inputName").style.display = "none"
+	document.getElementById("joinBtn").style.display = "none"
+	websocket.send(document.getElementById("inputName").value)
+	
+	navigator.mediaDevices.getUserMedia({video :true}).then(function(stream) {
+      		vid.srcObject = stream;
+    		setInterval(function() {
+        		draw.drawImage(vid, 0, 0)
+			websocket.send(canvas.toDataURL("image/jpeg", 0.7))}, 33)
+		})  
+
+	};
+	websocket.onerror = function(){
+		nameErr.textContent = "Couldn't connect oh nooo try again"
+		document.getElementById("Connecting").textContent = ""
+	}
+
+
+}
+
+let nameInput = document.getElementById("inputName")
+let button = document.getElementById("joinBtn")
+nameInput.oninput = function() {
+    document.getElementById("NameError").textContent = "";
+
+}
+
+ 
+</script>
+</body>
+</html>
