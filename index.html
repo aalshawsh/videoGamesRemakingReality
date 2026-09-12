@@ -14,7 +14,7 @@
 <img id="grid" style="max-width: 100%; height: auto;">
 <video id="video" autoplay muted style="width:1px; height:1px; opacity:0; position:absolute;"></video>
 
-<canvas id="canvas" width="320" height="240" style="display:none">
+<canvas id="canvas" style="display:none">
 
 </canvas>
 
@@ -22,6 +22,10 @@
 
 
 let vid = document.getElementById("video")
+vid.addEventListener("loadedmetadata", function() {
+    canvas.width = vid.videoWidth
+    canvas.height = vid.videoHeight
+})
 let canvas = document.getElementById("canvas")
 let draw = canvas.getContext("2d")
 
