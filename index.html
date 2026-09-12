@@ -48,7 +48,7 @@ function handleJoin(){
 	navigator.mediaDevices.getUserMedia({video :true}).then(function(stream) {
       		vid.srcObject = stream;
     		setInterval(function() {
-        		draw.drawImage(vid, 0, 0)
+        		draw.drawImage(vid, 0, 0, canvas.width, canvas.height)
 			websocket.send(canvas.toDataURL("image/jpeg", 0.7))}, 100)
 		})  
 
