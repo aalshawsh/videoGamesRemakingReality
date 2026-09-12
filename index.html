@@ -10,10 +10,11 @@
 <p id="NameError"></p>
 <p id="Connecting"></p>
 
-<video id = "video" autoplay muted>
-</video>
 
-<canvas id="canvas" width="320" height="240">
+<img id="grid" style="max-width: 100%; height: auto;">
+<video id="video" autoplay muted style="width:1px; height:1px; opacity:0; position:absolute;"></video>
+
+<canvas id="canvas" width="320" height="240" style="display:none">
 
 </canvas>
 
@@ -53,10 +54,15 @@ function handleJoin(){
 		})  
 
 	};
+
+	websocket.onmessage = function(event) {
+    		document.getElementById("grid").src = event.data
+	}
 	websocket.onerror = function(){
 		nameErr.textContent = "Couldn't connect oh nooo try again"
 		document.getElementById("Connecting").textContent = ""
 	}
+
 
 
 }
