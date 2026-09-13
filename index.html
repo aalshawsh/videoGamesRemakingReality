@@ -14,23 +14,80 @@
 <img id="grid" style="max-width: 100%; height: auto;">
 <video id="video" autoplay muted style="width:1px; height:1px; opacity:0; position:absolute;"></video>
 
-<canvas id="canvas" style="display:none">
-
+<canvas id="canvas">
 </canvas>
+<p id="Blinked">You have blinked this many times: </p>
 
-<script>
+<script type="module">
+import { FaceLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.mjs";
 
+const vision = await FilesetResolver.forVisionTasks(
+  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+);
+
+const faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
+  baseOptions: {
+    modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task"
+  },
+  runningMode: "VIDEO",
+  numFaces: 1
+});
+
+const LEFT_EYE = [362, 385, 387, 263, 373, 380];
+const RIGHT_EYE = [33, 160, 158, 133, 153, 144];
+const blink_thresh = 0.30;
+const succ_frame = 2;
+let count_frame = 0;
+
+function euclidean(p1, p2) {
+    return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
+}
+
+function calculateEAR(eye) {
+    const y1 = euclidean(eye[1], eye[5]);
+    const y2 = euclidean(eye[2], eye[4]);
+    const x1 = euclidean(eye[0], eye[3]);
+    return (y1 + y2) / (2.0 * x1);
+}
+
+let count = 0
+function detectLoop() {
+    console.log("loop running");
+    const results = faceLandmarker.detectForVideo(vid, performance.now());
+
+    if (results.faceLandmarks.length > 0) {
+        const landmarks = results.faceLandmarks[0];
+        const leftEyePts = LEFT_EYE.map(i => landmarks[i]);
+        const rightEyePts = RIGHT_EYE.map(i => landmarks[i]);
+
+        const avg = (calculateEAR(leftEyePts) + calculateEAR(rightEyePts)) / 2;
+
+        if (avg < blink_thresh) {
+            count_frame++;
+        } else {
+            if (count_frame >= succ_frame) {
+                count+=1
+                document.getElementById("Blinked").textContent = "You have blinked this many times: " + count
+                // send a lightweight message to server here, if you want
+            }
+            count_frame = 0;
+        }
+    }
+  
+    requestAnimationFrame(detectLoop);
+}
 
 let vid = document.getElementById("video")
+let canvas = document.getElementById("canvas")
 vid.addEventListener("loadedmetadata", function() {
     canvas.width = vid.videoWidth
     canvas.height = vid.videoHeight
 })
-let canvas = document.getElementById("canvas")
 let draw = canvas.getContext("2d")
 
 // what happens when player clicks join!
-function handleJoin(){
+function handleJoin()
+{
 
 	// check if valid
 	let length = document.getElementById("inputName").value.length
@@ -42,7 +99,7 @@ function handleJoin(){
 	nameErr.textContent = "";
 	document.getElementById("Connecting").textContent = "Connecting..."
 
-	let websocket = new WebSocket("wss://uncross-divinely-pointing.ngrok-free.dev");	
+	let websocket = new WebSocket("ws://localhost:8001");
 
 	websocket.onopen = function(){
 	document.getElementById("Connecting").textContent = ""
@@ -51,17 +108,18 @@ function handleJoin(){
 	websocket.send(document.getElementById("inputName").value)
 	
 	navigator.mediaDevices.getUserMedia({video :true}).then(function(stream) {
-      		vid.srcObject = stream;
-    		setInterval(function() {
+		vid.srcObject = stream
+		vid.addEventListener("loadedmetadata", function() {
+        detectLoop();
+    });
+		setInterval(function() {
         		draw.drawImage(vid, 0, 0, canvas.width, canvas.height)
-			websocket.send(canvas.toDataURL("image/jpeg", 0.7))}, 100)
+			websocket.send(canvas.toDataURL("image/jpeg", 0.7))
+			}, 50)
 		})  
 
-	};
-
-	websocket.onmessage = function(event) {
-    		document.getElementById("grid").src = event.data
 	}
+
 	websocket.onerror = function(){
 		nameErr.textContent = "Couldn't connect oh nooo try again"
 		document.getElementById("Connecting").textContent = ""
@@ -70,6 +128,7 @@ function handleJoin(){
 
 
 }
+window.handleJoin = handleJoin;
 
 let nameInput = document.getElementById("inputName")
 let button = document.getElementById("joinBtn")
