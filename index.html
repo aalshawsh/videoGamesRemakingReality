@@ -52,7 +52,6 @@ function calculateEAR(eye) {
 
 let count = 0
 function detectLoop() {
-    console.log("loop running");
     const results = faceLandmarker.detectForVideo(vid, performance.now());
 
     if (results.faceLandmarks.length > 0) {
