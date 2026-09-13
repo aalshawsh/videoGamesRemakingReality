@@ -51,30 +51,39 @@ function calculateEAR(eye) {
 }
 
 let count = 0
+let frameCount = 0;
+let noFaceCount = 0;
+
 function detectLoop() {
+    frameCount++;
     const results = faceLandmarker.detectForVideo(vid, performance.now());
 
-    if (results.faceLandmarks.length > 0) {
+    if (results.faceLandmarks.length === 0) {
+        noFaceCount++;
+    } else {
         const landmarks = results.faceLandmarks[0];
         const leftEyePts = LEFT_EYE.map(i => landmarks[i]);
         const rightEyePts = RIGHT_EYE.map(i => landmarks[i]);
-
         const avg = (calculateEAR(leftEyePts) + calculateEAR(rightEyePts)) / 2;
+        console.log("EAR:", avg.toFixed(3));
 
         if (avg < blink_thresh) {
             count_frame++;
         } else {
             if (count_frame >= succ_frame) {
-                count+=1
-                document.getElementById("Blinked").textContent = "You have blinked this many times: " + count
+                count += 1;
+                document.getElementById("Blinked").textContent = "You have blinked this many times: " + count;
             }
             count_frame = 0;
         }
     }
-  
+
+    if (frameCount % 60 === 0) {
+        console.log(`Video: ${vid.videoWidth}x${vid.videoHeight}, No-face rate: ${noFaceCount}/${frameCount}`);
+    }
+
     requestAnimationFrame(detectLoop);
 }
-
 let vid = document.getElementById("video")
 let canvas = document.getElementById("canvas")
 vid.addEventListener("loadedmetadata", function() {
