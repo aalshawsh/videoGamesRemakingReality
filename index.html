@@ -100,7 +100,7 @@ function handleJoin()
 	nameErr.textContent = "";
 	document.getElementById("Connecting").textContent = "Connecting..."
 
-	websocket = new WebSocket("ws://34.129.203.129:8001");
+	websocket = new WebSocket("wss://noticemesenpai.duckdns.org");
 
 	websocket.onopen = function(){
 	document.getElementById("Connecting").textContent = ""
