@@ -6,15 +6,16 @@
 <body>
 
 <div id ="start_screen">
-    <p id="rules">Please refrain from moving too much, once you click the button keep your eyes open for maximum accuracy</p>
+    <p id="rules">Please refrain from moving too much, once you click the button keep a resting face without blinking</p>
 	<button id= "start_button" onclick="showPage2()" style="width: 200px; height: 50px;">Start blink calibration??(KEEP YOUR EYES OPEN ONCE YOU CLICK THIS)</button>
 <div id = "calibration">
 <p id = "count_down" style="display: none; width: 200px; height: 50px;"></p>
-<video id="cali_vid" autoplay muted>
-</video>
 </div>
 </div>
 
+<video id="video" autoplay muted style="width:1px; height:1px; opacity:0; position:absolute;"></video>
+<canvas id="canvas">
+</canvas>
 
 <div id="join_screen" style="display: none;">
 <input id="inputName" type="text" minlength="2" maxlength="20" size="10" />
@@ -22,12 +23,6 @@
 <p id="NameError"></p>
 <p id="Connecting"></p>
 
-
-<img id="grid" style="max-width: 100%; height: auto;">
-<video id="video" autoplay muted style="width:1px; height:1px; opacity:0; position:absolute;"></video>
-
-<canvas id="canvas">
-</canvas>
 <p id="Blinked">You have blinked this many times: </p>
 <img src="img2.jpg" alt="hamster_pic(plz show the pic)">
 </div>
@@ -38,6 +33,8 @@
 let camera_allowed = false
 let total = 10
 let my_list = []
+let vid = document.getElementById("video")
+let camera_stream = null;
 function showPage2() {
 	if(camera_allowed){
     document.getElementById('count_down').style.display = 'block';
@@ -60,17 +57,16 @@ window.showPage2 = showPage2;
 function joinPage(){
     document.getElementById('start_screen').style.display = 'none';
     document.getElementById('join_screen').style.display = 'block';
-    stopCamera();
 }
 
 
 function stopCamera() {
-    const stream = cali_vid.srcObject;
-    if (stream) {
-        stream.getTracks().forEach(function(track) {
+    if (camera_stream) {
+        camera_stream.getTracks().forEach(function(track) {
             track.stop();
         });
-        cali_vid.srcObject = null;
+        vid.srcObject = null;
+        camera_stream = null;
     }
 }
 
@@ -133,7 +129,7 @@ function detectLoop() {
 
 function calibrateLoop() {
 
-    const results = faceLandmarker.detectForVideo(cali_vid, performance.now());
+    const results = faceLandmarker.detectForVideo(vid, performance.now());
 
     if (results.faceLandmarks.length > 0) {
         const landmarks = results.faceLandmarks[0];
@@ -152,23 +148,31 @@ function calibrateLoop() {
         for (let item of my_list) {
             sum+= item
         }
-        blink_thresh=sum/my_list.length
+        blink_thresh=(sum/my_list.length)* 0.7
         joinPage()
     }
 }
 
 let websocket = null;
-let vid = document.getElementById("video")
 let canvas = document.getElementById("canvas")
 vid.addEventListener("loadedmetadata", function() {
     canvas.width = vid.videoWidth
     canvas.height = vid.videoHeight
 })
 let draw = canvas.getContext("2d")
-
+let joined = false
 navigator.mediaDevices.getUserMedia({video :true}).then(function(stream) {
-		cali_vid.srcObject = stream
+		vid.srcObject = stream
+        camera_stream = stream;
 		camera_allowed = true
+        const interval = setInterval(function() {
+            if (!joined) {
+                draw.drawImage(vid, 0, 0, canvas.width, canvas.height);
+            } else {
+                clearInterval(interval);
+            }
+
+        }, 50);
 }).catch(function(err) {
     alert("Camera access is required to continue.");
 });
@@ -176,7 +180,7 @@ navigator.mediaDevices.getUserMedia({video :true}).then(function(stream) {
 // what happens when player clicks join!
 function handleJoin()
 {
-
+    joined = true
 	// check if valid
 	let length = document.getElementById("inputName").value.length
 	let nameErr = document.getElementById("NameError")
@@ -195,16 +199,11 @@ function handleJoin()
 	document.getElementById("joinBtn").style.display = "none"
 	websocket.send(document.getElementById("inputName").value)
 	
-	navigator.mediaDevices.getUserMedia({video :true}).then(function(stream) {
-		vid.srcObject = stream
-		vid.addEventListener("loadedmetadata", function() {
-        detectLoop();
-    });
-		setInterval(function() {
-        		draw.drawImage(vid, 0, 0, canvas.width, canvas.height)
-			websocket.send(canvas.toDataURL("image/jpeg", 0.7))
-			}, 50)
-		})  
+    setInterval(function() {
+        draw.drawImage(vid, 0, 0, canvas.width, canvas.height)
+        websocket.send(canvas.toDataURL("image/jpeg", 0.7))
+    }, 50) 
+    detectLoop();
 
 	}
 
