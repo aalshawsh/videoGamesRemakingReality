@@ -191,8 +191,8 @@ function handleJoin()
 	document.getElementById("Connecting").textContent = "Connecting..."
 
 	websocket = new WebSocket("wss://noticemesenpai.duckdns.org");
-	joined = true
 	websocket.onopen = function(){
+	joined = true
 	document.getElementById("Connecting").textContent = ""
 	document.getElementById("inputName").style.display = "none"
 	document.getElementById("joinBtn").style.display = "none"
