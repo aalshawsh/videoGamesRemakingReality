@@ -180,7 +180,6 @@ navigator.mediaDevices.getUserMedia({video :true}).then(function(stream) {
 // what happens when player clicks join!
 function handleJoin()
 {
-    joined = true
 	// check if valid
 	let length = document.getElementById("inputName").value.length
 	let nameErr = document.getElementById("NameError")
@@ -192,7 +191,7 @@ function handleJoin()
 	document.getElementById("Connecting").textContent = "Connecting..."
 
 	websocket = new WebSocket("wss://noticemesenpai.duckdns.org");
-	
+	joined = true
 	websocket.onopen = function(){
 	document.getElementById("Connecting").textContent = ""
 	document.getElementById("inputName").style.display = "none"
