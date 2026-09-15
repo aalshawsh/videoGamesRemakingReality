@@ -1,10 +1,22 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Page Title</title>
+<title>Notice Me Senpai</title>
 </head>
 <body>
 
+<div id ="start_screen">
+    <p id="rules">Please refrain from moving too much, once you click the button keep your eyes open for maximum accuracy</p>
+	<button id= "start_button" onclick="showPage2()" style="width: 200px; height: 50px;">Start blink calibration??(KEEP YOUR EYES OPEN ONCE YOU CLICK THIS)</button>
+<div id = "calibration">
+<p id = "count_down" style="display: none; width: 200px; height: 50px;"></p>
+<video id="cali_vid" autoplay muted>
+</video>
+</div>
+</div>
+
+
+<div id="join_screen" style="display: none;">
 <input id="inputName" type="text" minlength="2" maxlength="20" size="10" />
 <button id="joinBtn" onclick="handleJoin()">Join</button>
 <p id="NameError"></p>
@@ -18,7 +30,50 @@
 </canvas>
 <p id="Blinked">You have blinked this many times: </p>
 <img src="img2.jpg" alt="hamster_pic(plz show the pic)">
+</div>
+
+
 <script type="module">
+
+let camera_allowed = false
+let total = 10
+let my_list = []
+function showPage2() {
+	if(camera_allowed){
+    document.getElementById('count_down').style.display = 'block';
+    document.getElementById('start_button').style.display = 'none';
+    document.getElementById('rules').style.display = 'none';
+    const countdown = setInterval(function() {
+    document.getElementById("count_down").textContent = "STARTING CALIBRATION...FINISHING IN "+total
+    
+    if (total <= 0) {
+        document.getElementById("count_down").style.display = 'none'
+        clearInterval(countdown);
+    }
+    total--;
+    }, 1000);
+    calibrateLoop();
+    }
+}
+window.showPage2 = showPage2;
+
+function joinPage(){
+    document.getElementById('start_screen').style.display = 'none';
+    document.getElementById('join_screen').style.display = 'block';
+    stopCamera();
+}
+
+
+function stopCamera() {
+    const stream = cali_vid.srcObject;
+    if (stream) {
+        stream.getTracks().forEach(function(track) {
+            track.stop();
+        });
+        cali_vid.srcObject = null;
+    }
+}
+
 import { FaceLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.mjs";
 
 const vision = await FilesetResolver.forVisionTasks(
@@ -35,7 +90,7 @@ const faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
 
 const LEFT_EYE = [362, 385, 387, 263, 373, 380];
 const RIGHT_EYE = [33, 160, 158, 133, 153, 144];
-const blink_thresh = 0.30;
+let blink_thresh = 0.30;
 const succ_frame = 2;
 let count_frame = 0;
 
@@ -76,6 +131,32 @@ function detectLoop() {
     requestAnimationFrame(detectLoop);
 }
 
+function calibrateLoop() {
+
+    const results = faceLandmarker.detectForVideo(cali_vid, performance.now());
+
+    if (results.faceLandmarks.length > 0) {
+        const landmarks = results.faceLandmarks[0];
+        const leftEyePts = LEFT_EYE.map(i => landmarks[i]);
+        const rightEyePts = RIGHT_EYE.map(i => landmarks[i]);
+
+        const avg = (calculateEAR(leftEyePts) + calculateEAR(rightEyePts)) / 2;
+        my_list.push(avg)
+        
+    }
+    if(total>0){
+        requestAnimationFrame(calibrateLoop);
+    }
+    else{
+        let sum = 0
+        for (let item of my_list) {
+            sum+= item
+        }
+        blink_thresh=sum/my_list.length
+        joinPage()
+    }
+}
+
 let websocket = null;
 let vid = document.getElementById("video")
 let canvas = document.getElementById("canvas")
@@ -84,6 +165,13 @@ vid.addEventListener("loadedmetadata", function() {
     canvas.height = vid.videoHeight
 })
 let draw = canvas.getContext("2d")
+
+navigator.mediaDevices.getUserMedia({video :true}).then(function(stream) {
+		cali_vid.srcObject = stream
+		camera_allowed = true
+}).catch(function(err) {
+    alert("Camera access is required to continue.");
+});
 
 // what happens when player clicks join!
 function handleJoin()
