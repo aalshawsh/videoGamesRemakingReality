@@ -1,0 +1,3 @@
+# About
+A website made for university project, which uses MediaPipe's Face Landmarker, running in the browser, to track 6 landmark points around each eye, and detect blinks!
+Players join a server(currently not running) and compete with each other to get the least amount of blinks...
